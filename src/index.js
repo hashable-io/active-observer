@@ -4,12 +4,15 @@ import { DEFAULT_OPTIONS } from "./default_settings";
 import proxy from "./proxy";
 import reprocessor from "./reprocessor";
 
-const withDefaults = R.merge(DEFAULT_OPTIONS)
+const withDefaults = R.merge(DEFAULT_OPTIONS);
 
 export function start(options) {
-  return R.compose(proxy, withDefaults)(options)
+  const finalOptions = withDefaults(options);
+  const server = proxy(finalOptions);
+  console.log(`Listening on Port: ${finalOptions.port}`)
+  return server;
 }
 
 export function rehash(options) {
-  return R.compose(reprocessor, withDefaults)(options)
+  return reprocessor(withDefaults(options));
 }

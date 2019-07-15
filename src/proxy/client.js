@@ -4,28 +4,29 @@ import http from 'http';
 import https from 'https';
 
 import { ContentType } from "../constants";
-import { otherwise } from "../utils";
+import { regExArrayContains, otherwise } from "../utils";
+import { parseJson } from "../utils/json";
 
-export function fetch(options, response) {
+export function fetch(request, response, options) {
   return new Promise((resolve, reject) => {
-    const protocolHandler = options.port == 443 ? https : http;
-    const onConnectionEstablished = onRequestEstablished(options, response, resolve, reject);
-    const onErrorConnecting = onRequestError(options, resolve, reject);
-    const remoteRequest = protocolHandler.request(options, onConnectionEstablished);
+    const protocolHandler = request.port == 443 ? https : http;
+    const onConnectionEstablished = onRequestEstablished(options, request, response, resolve, reject);
+    const onErrorConnecting = onRequestError(options, request, resolve, reject);
+    const remoteRequest = protocolHandler.request(request, onConnectionEstablished);
+    
     const writeData = data => remoteRequest.write(data);
     const bodyIsNotNil = R.compose(R.not, R.isNil, R.prop("body")); 
 
     remoteRequest.on('error', onErrorConnecting);
     // Forward Request Body
-    R.when(bodyIsNotNil, R.pipe(getFormattedRequestBody, writeData))(options);
+    R.when(bodyIsNotNil, R.pipe(getFormattedRequestBody, writeData))(request);
     remoteRequest.end();
   });
 };
 
 
-function onRequestEstablished(options, response, resolve, reject) {
-  return (remoteServerResponse) => 
-    this.accumulateResponse(remoteServerResponse, options, resolve, reject);
+function onRequestEstablished(options, request, response, resolve, reject) {
+  return (remoteServerResponse) => accumulateResponse(remoteServerResponse, request, resolve, reject);
 }
 
 
@@ -35,7 +36,7 @@ function accumulateResponse(remoteServerResponse, options, resolve, reject) {
   const contentType = ContentType.get(headers);
   const responseData = [];
   remoteServerResponse.on('data', chunk => responseData.push(chunk));
-  remoteServerResponse.on('end', function () {
+  remoteServerResponse.on('end', () => {
     const payload = Buffer.concat(responseData);
     const data = options.method == 'OPTIONS' || !isJson ? payload.toString("hex") : parseJson(payload.toString("utf8"));
     resolve({
@@ -47,15 +48,36 @@ function accumulateResponse(remoteServerResponse, options, resolve, reject) {
     });
   });
 
-  remoteServerResponse.on('error', function () {
+  remoteServerResponse.on('error', () => {
     reject('Unable to load data from request.');
   });
 };
 
 function getFormattedRequestBody({ body, headers }) {
-  R.cond([
+  return R.cond([
     R.pair(ContentType.isJson, _ => JSON.stringify(body)),
     R.pair(ContentType.isText, _ => body),
     R.pair(otherwise,          _ => Buffer.from(body, "hex"))
-  ])(headers)
+  ])(headers);
+}
+
+function onRequestError(options, request, resolve, reject) {
+  return (error) => {
+    const isIgnoredContentType = regExArrayContains(options.contentTypesIgnored, request.headers.accept);
+    switch (error.code) {
+      case 'ENOTFOUND':
+        if (!isIgnoredContentType) {
+          console.log('Unable to Connect to Host.');
+          console.log('Check the Domain Spelling and Try Again.');
+          console.log('No Data Saved for Request.');
+        }
+        break;
+    }
+
+    if (isIgnoredContentType) {
+      reject(false);
+    } else {
+      reject(error);
+    }
+  };
 }

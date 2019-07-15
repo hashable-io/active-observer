@@ -3,7 +3,9 @@ import R from 'ramda';
 import crypto from 'crypto';
 import qs from 'querystring';
 
-import { sortObjectKeys } from './json'
+import { sortObjectKeys } from './json';
+import { filterHeaders } from '../proxy/headers';
+
 const stringifyBody = R.when(
   R.has('body'),
   R.converge(
@@ -22,24 +24,24 @@ const composeSignature = R.compose(
 );
 
 function computeHash (payload) {
-  let shasum = crypto.createHash('sha1');
+  const shasum = crypto.createHash('sha1');
   shasum.update(payload);
   return shasum.digest('hex');
 }
 
-toString = function () {
-  return composeSignature(filteredAttributes());
+export function requestHash(request, options) {
+  return composeSignature(filteredAttributes(request, options));
 };
 
-function filteredAttributes(request) {
-  const { ignoreJsonBodyPath, queryParameterBlacklist, whiteLabel, cacheHeaders } = options
+function filteredAttributes(request, options) {
+  const { ignoreJsonBodyPath, queryParameterBlacklist, whiteLabel, cacheHeaders } = options;
   return R.compose(
     R.reduce(stubIgnoredJsonPaths, R.__, ignoreJsonBodyPath || []),
     R.reduce(removeBlacklistedQueryParams, R.__, queryParameterBlacklist || []),
     R.ifElse(R.always(whiteLabel), makeHostAndPortAgnostic, R.identity),
     R.converge(
       R.assoc('headers'), [
-        R.compose(HeaderUtil.filterHeaders(cacheHeaders), R.prop('headers')),
+        R.compose(filterHeaders(cacheHeaders), R.prop('headers')),
         R.identity
       ]
     ),
@@ -51,8 +53,8 @@ function stubIgnoredJsonPaths (payload, path) {
     return payload;
   }
 
-  let updatedPath = ['body'].concat(path.split('.'));
-  let jsonPath = R.lensPath(updatedPath);
+  const updatedPath = ['body'].concat(path.split('.'));
+  const jsonPath = R.lensPath(updatedPath);
 
   return R.ifElse(
     R.view(jsonPath),

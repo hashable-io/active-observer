@@ -1,0 +1,141 @@
+import fs from "fs";
+import path from "path";
+
+import R from "ramda";
+
+import * as headerUtils from "./headers.js";
+import * as hashUtils from "../utils/hash";
+import * as utils from "../utils";
+
+const EXT = '.cache'
+export function isCached(request, options) {
+  return R.any(fileExists, [
+    requestPathOverride(request, options),
+    requestPath(request, options)
+  ]);
+}
+
+export function record(request, response, options) {
+  return new Promise((resolve, reject) => {
+    // TODO: Migrate to {response, request, options} format
+    response.request.headers = headerUtils.filterHeaders(options.cacheHeader, request.headers);
+    response.headers = headerUtils.removeHeaders(options.responseHeaderBlacklist, response.headers);
+    response.request.path = headerUtils.filterQueryParameters(
+      options.queryParameterBlacklist,
+      response.request.path
+    );
+
+    let responseString = utils.stringify(response) + '\n';
+
+    let writeToFile = () => {
+      if (options.passthrough) { return resolve(response); }
+      let targetFile = getWriteFileName(request, options);
+      writeToAccessFile(targetFile, options);
+      fs.writeFile(targetFile, responseString, (err) => {
+        if (err) { return reject(err); }
+        resolve(response);
+      });
+    };
+
+    let directoryName = directory(request, options.overrideCacheDir || options.cacheDir);
+    if (!directoryExists(directoryName)) {
+      return createDirectory(directoryName).then(writeToFile);
+    }
+
+    writeToFile();
+  });
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Helper Functions:
+///////////////////////////////////////////////////////////////////////////////
+
+const isDirectory = (path) => fs.statSync(path).isDirectory();
+const directoryExists = R.tryCatch(isDirectory, R.F);
+
+function createDirectory(directoryPath) {
+  return new Promise((resolve, reject) => {
+    createDirectoryParent(directoryPath, (error) => {
+      if (error) {
+        return reject('Failed to Create Directory: ' + directoryPath);
+      }
+      resolve();
+    });
+  });
+};
+
+function createDirectoryParent(directoryPath, callback) {
+  fs.mkdir(directoryPath, (error) => {
+    if (error && error.code === 'ENOENT') {
+      let parentDirectory = path.dirname(directoryPath);
+      let createCurrentDirectoryCallback = createDirectoryParent.bind(null, directoryPath, callback);
+      return createDirectoryParent(parentDirectory, createCurrentDirectoryCallback);
+    }
+
+    return callback(error);
+  });
+}
+
+
+function fileExists(location) {
+  try {
+    fs.accessSync(location, RW_MODE);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function requestPath(request, options) {
+  let hash = requestHash(request, options);
+  let directoryName = directory(request, options.cacheDir);
+
+  return path.join(directoryName, hash) + EXT;
+}
+
+function requestPathOverride(request, options) {
+  let hash = requestHash(request, options);
+  let directoryName = directory(request, options.overrideCacheDir || '');
+
+  return path.join(directoryName, hash) + EXT;
+}
+
+function replaceQueryParam(directoryName) {
+  let queryParamStartIndex = directoryName.indexOf('?');
+
+  if (queryParamStartIndex == -1) {
+    return directoryName;
+  }
+
+  return directoryName.substr(0, queryParamStartIndex);
+}
+
+function directory(request, rootDir) {
+  let requestPath = request.path || '';
+  let pathEndsSlash = requestPath.lastIndexOf('/') == path.length - 1;
+  requestPath = pathEndsSlash ? requestPath.substr(0, requestPath.length - 1) : requestPath;
+  requestPath = requestPath.split('/').map(replaceQueryParam).join('/').toLowerCase();
+
+  return path.join(rootDir, requestPath);
+}
+
+function requestHash(request, options) {
+  return hashUtils.requestHash(request, options)
+    .toString()
+    .substr(0,10);
+}
+
+function getWriteFileName(request, options) {
+  if (options.overrideCacheDir) {
+    return requestPathOverride(request, options);
+  }
+  return requestPath(request, options);
+}
+
+function writeToAccessFile(filePath, options) {
+  if (options.accessLogFile) {
+    fs.appendFile(options.accessLogFile, filePath + '\n', (err) => {
+      if (err) throw err;
+    });
+  }
+};

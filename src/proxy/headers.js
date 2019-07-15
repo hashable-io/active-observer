@@ -39,9 +39,37 @@ export function sortHeaders(headers) {
 export function updateFormHeaders(request) {
   return R.ifElse(
     R.compose(ContentType.is(ContentType.MULTIPART_FORM), R.prop("headers")),
-    FormDataHandler.updateBoundary,
+    updateBoundary,
     R.identity
   )(request);
 }
 
+
+export function filterHeaders(cacheHeader) {
+  return R.identity; // TODO: Implement filter fn
+}
+
+export function removeHeaders() {}
+export function filterQueryParameters() {}
+
+function updateBoundary(request) {
+  let { headers, body } = request;
+  if (!isFormData(headers)) {
+    return request;
+  }
+
+  let oldBoundary = getBoundary(headers);
+  let newBoundary = getNewBoundary(oldBoundary, body);
+
+  return R.compose(
+    setHeaderBoundary(oldBoundary, newBoundary),
+    setBodyBoundary(oldBoundary, newBoundary)
+  )(request);
+}
+
+const isFormData = R.ifElse(
+  R.has(Headers.CONTENT_TYPE),
+  R.over(R.lensProp(Headers.CONTENT_TYPE), x => x.match(ContentType.MULTIPART_FORM)),
+  R.F
+);
 

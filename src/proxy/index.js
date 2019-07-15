@@ -1,7 +1,10 @@
 import url from "url";
+
+import { Reader } from "monet";
 import R from "ramda";
 
-import client from "./client";
+import * as client from "./client";
+import * as cacheClient from "./cache";
 import server from "./server";
 import { ContentType, Headers, Modes } from "../constants"
 import {
@@ -10,16 +13,17 @@ import {
   sortHeader,
   updateFormHeaders
 } from "./headers"
-import { parseJson } from "../utils";
+import { otherwise } from "../utils";
+import { parseJson } from "../utils/json";
 
 export default function proxy(options) {
   const { port, handleReady } = options;
-  const worker = server.listen({ 
-    port: options.port, 
-    handleRequest: R.curry(handleRequest)(options), 
-    handleReady: options.handleReady 
+  console.log('Starting Proxy', options)
+  return server.listen({ 
+    onReady: options.handleReady,
+    onRequest: handleRequest.run(options),
+    port: options.port
   });
-  return server
 }
 
 
@@ -30,91 +34,106 @@ export default function proxy(options) {
 /**
  * Entry Point for Requests
  **/
-function handleRequest(options, request, response) {
-  R.compose(
-    R.curry(attachCORSHeaders)(response), 
-    R.view(R.lensPath(["headers", "origin"]))
-  )(request)
+const handleRequest = Reader(options => {
+  return (request, response) => {
+    R.compose(
+      R.curry(attachCORSHeaders)(response), 
+      R.view(R.lensPath(["headers", "origin"]))
+    )(request)
 
-  const echoWithOptions = R.flip(R.curry(echo)(options))(response);
-  const setBody = R.curry(updateWithParsedBody);
+    const echoToResponse = R.flip(R.curry(echo))(response);
+    const setBody = R.curry(updateWithParsedBody);
 
-  // Finish Receiving Payload
-  const data = [];
-  request.on('data', chunk => data.push(chunk));
-  request.on('end', () => {
-    const payload = Buffer.concat(data);
-    R.pipe(
-      updateFormHeaders,
-      setBody(payload),
-      echoWithOptions
-    )(simplify(options, request))
+    // Finish Receiving Payload
+    const data = [];
+    request.on('data', chunk => data.push(chunk));
+    request.on('end', () => {
+      const payload = Buffer.concat(data);
+      R.pipe(
+        updateFormHeaders,
+        setBody(payload),
+        req => echoToResponse(req).run(options) // async action
+      )(simplify(options, request))
+    });
+  };
+});
+
+function echo(request, response) {
+  return Reader(options => options.mode).flatMap(
+    R.cond([
+      R.pair(R.equals(Modes.PROXY_WITH_CACHE), _ => proxyWithCache(request, response)),
+      R.pair(R.equals(Modes.PROXY_ONLY),       _ => proxyOnly(request, response)),
+      R.pair(R.equals(Modes.CACHE_ONLY),       _ => cacheOnly(request, response)),
+      R.pair(otherwise,                        _ => { throw Error("Unknown Mode Specified.") })
+    ])
+  );
+}
+
+function proxyWithCache(request, response) {
+  return Reader.ask().flatMap(options => 
+    R.cond([
+      R.pair(isCached(options), _ => repeat(request, response)),
+      R.pair(otherwise,         _ => cache(request, response))
+    ])(request)
+  );
+}
+
+function proxyOnly(request, response) {
+  return Reader(options => client.fetch(request, response, options));
+}
+
+function cacheOnly(request, response) {
+  return Reader.ask().flatMap(options => 
+    R.cond([
+      R.pair(isCached(options), _ => repeat(request, response)),
+      R.pair(otherwise,         _ => notFound(request, response))
+    ])(request)
+  );
+}
+
+
+function repeat(request, response) {
+  return Reader(options => {
+    //TODO: Implement
   });
 }
 
-const otherwise = R.T;
-
-function echo(options, request, response) {
-  R.cond([
-    R.pair(R.equals(Modes.PROXY_WITH_CACHE), _ => proxyWithCache(options, request, response)),
-    R.pair(R.equals(Modes.PROXY_ONLY),       _ => proxyOnly(options, request, response)),
-    R.pair(R.equals(Modes.CACHE_ONLY),       _ => cacheOnly(options, request, response)),
-    R.pair(otherwise,                        _ => { throw Error("Unknown Mode Specified.") })
-  ])(options.mode)
+function cache(request, response) {
+  return Reader.ask()
+    .map(options => client.fetch(request, response, options))
+    .flatMap(pendingResponse => record(request, pendingResponse));
 }
 
-const proxyWithCache = R.curry((options, request, response) => {
-  return R.cond([
-    R.pair(isCached,  _ => repeat(options, request, response)),
-    R.pair(otherwise, _ => cache(options, request, response))
-  ])(request);
-});
-
-const proxyOnly = R.curry((options, request, response) => {
-  return client.fetch(options, response)
-});
-
-const cacheOnly = R.curry((options, request, response) => {
-  return R.cond([
-    R.pair(isCached,  _ => repeat(options, request, response)),
-    R.pair(otherwise, _ => notFound(options, request, response))
-  ])(request);
-});
-
-
-function repeat(options, request, response) {
-
+function record(request, pendingResponse) {
+  return Reader(options => {
+    pendingResponse.then(remoteResponse => {
+      cacheClient.record(request, remoteResponse, options);
+    });
+    // TODO: Handle Error.
+  });
 }
 
-function cache(options, request, response) {
-  return R.then(R.curry(record)(request))(client.fetch(options, response));
+function notFound(request, response) {
+  return Reader(options => {
+    // TODO: Fill response with a default AO Message. 
+  });
 }
 
-function record(request, remoteResponse) {
-  // TODO
-}
-
-function notFound(options, request, response) {
-  // TODO: Fill response with a default AO Message. 
-}
-
-function isCached(request) {
-  // TODO: Fill in
-  return false;
+function isCached(options) {
+  return request => cacheClient.isCached(request, options);
 }
 
 function simplify(options, request) {
   const { serverBaseUrl } = options;
-  const { headers, method, url } = request; 
-  const { hostname, path, port, protocol } = url.parse(serverBaseUrl + url);
+  const { hostname, path, port, protocol } = url.parse(serverBaseUrl + request.url);
 
   return {
-    headers: standardizeHeaders(headers),
+    headers: standardizeHeaders(request.headers),
     hostname,
-    method,
+    method: request.method,
     path,
-    port: parseInt(port) || (protocol === 'https:' ? 443 : 80),
-    transaction: this.transactionState.get(path, method)
+    port: parseInt(port) || (protocol === 'https:' ? 443 : 80)
+    // TODO: Implement Transaction State
   };
 }
 

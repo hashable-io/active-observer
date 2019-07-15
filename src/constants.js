@@ -59,7 +59,7 @@ export const ContentType = {
   MULTIPART_FORM,
   TEXT_HTML,
   TEXT_PLAIN,
-  get: R.view(R.prop(CONTENT_TYPE)),
+  get: R.view(R.lensProp(CONTENT_TYPE)),
   is: R.propEq(Headers.CONTENT_TYPE),
   isJson: R.propEq(CONTENT_TYPE, APPLICATION_JSON),
   isText: R.compose(
