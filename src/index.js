@@ -6,9 +6,9 @@ import reprocessor from "./reprocessor";
 
 const withDefaults = R.merge(DEFAULT_OPTIONS);
 
-export function start(options) {
+export function start(handleReady, options) {
   const finalOptions = withDefaults(options);
-  const server = proxy(finalOptions);
+  const server = proxy(handleReady, finalOptions);
   console.log(`Listening on Port: ${finalOptions.port}`)
   return server;
 }

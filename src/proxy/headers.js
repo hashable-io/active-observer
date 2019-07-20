@@ -1,3 +1,5 @@
+import qs from 'querystring';
+
 import R from "ramda";
 
 import { ContentType, Headers, HeadersWhitelist } from "../constants"
@@ -17,9 +19,9 @@ export function attachCORSHeaders(response, origin) {
 }
 
 export function standardizeHeaders(headers) {
-  let entries = R.toPairs(sortHeaders(headers));
-  let transform = R.filter(R.apply(isInWhiteList));
-  let reducer = (targetObj, [key, value]) => R.assoc(key, value, targetObj);
+  const entries = R.toPairs(sortHeaders(headers));
+  const transform = R.filter(R.apply(isInWhiteList));
+  const reducer = (targetObj, [key, value]) => R.assoc(key, value, targetObj);
   
   return R.transduce(transform, reducer, {}, entries);
 }
@@ -45,21 +47,48 @@ export function updateFormHeaders(request) {
 }
 
 
-export function filterHeaders(cacheHeader) {
-  return R.identity; // TODO: Implement filter fn
+export function filterHeaders(request, options) {
+  const { headersTracked } = options;
+  function keepWanted(targetObject, key) { 
+    const value = request.headers[key];
+    return R.when(
+      R.always(value), 
+      R.assoc(key, value, targetObj)
+    )(targetObj);
+  }
+
+  return R.reduce(keepWanted, {}, headersTracked);
 }
 
-export function removeHeaders() {}
-export function filterQueryParameters() {}
+export function removeHeaders(response, options) {
+  const { responseHeadersIgnored } = options;
+  const { headers } = response;
+  return {};
+}
+
+export function filterQueryParameters(request, options) {
+  const { queryParametersIgnored } = options;
+  const { path } = request;
+  const ignoreList = R.map(R.trim)(queryParametersIgnored);
+  const [host, queryString = ""] = path.split('?');
+  const filteredQueryString = R.pipe(
+    qs.parse,
+    R.omit(ignoreList),
+    qs.stringify,
+  )(queryString);
+  const isNonFalsey = R.identity
+
+  return R.filter(isNonFalsey, [host, filteredQueryString]).join("?");
+}
 
 function updateBoundary(request) {
-  let { headers, body } = request;
+  const { headers, body } = request;
   if (!isFormData(headers)) {
     return request;
   }
 
-  let oldBoundary = getBoundary(headers);
-  let newBoundary = getNewBoundary(oldBoundary, body);
+  const oldBoundary = getBoundary(headers);
+  const newBoundary = getNewBoundary(oldBoundary, body);
 
   return R.compose(
     setHeaderBoundary(oldBoundary, newBoundary),

@@ -34,14 +34,20 @@ export function requestHash(request, options) {
 };
 
 function filteredAttributes(request, options) {
-  const { ignoreJsonBodyPath, queryParameterBlacklist, whiteLabel, cacheHeaders } = options;
+  const { 
+    headersTracked, 
+    hostAgnostic,
+    ignoreJsonBodyPath, 
+    queryParametersIgnored
+  } = options;
+
   return R.compose(
-    R.reduce(stubIgnoredJsonPaths, R.__, ignoreJsonBodyPath || []),
-    R.reduce(removeBlacklistedQueryParams, R.__, queryParameterBlacklist || []),
-    R.ifElse(R.always(whiteLabel), makeHostAndPortAgnostic, R.identity),
+    R.reduce(stubIgnoredJsonPaths, R.__, ignoreJsonBodyPath),
+    R.reduce(removeBlacklistedQueryParams, R.__, queryParametersIgnored),
+    R.ifElse(R.always(hostAgnostic), makeHostAndPortAgnostic, R.identity),
     R.converge(
       R.assoc('headers'), [
-        R.compose(filterHeaders(cacheHeaders), R.prop('headers')),
+        R.curry(R.flip(filterHeaders))(options),
         R.identity
       ]
     ),

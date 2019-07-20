@@ -16,12 +16,11 @@ import {
 import { otherwise } from "../utils";
 import { parseJson } from "../utils/json";
 
-export default function proxy(options) {
-  const { port, handleReady } = options;
-  console.log('Starting Proxy', options)
+export default function proxy(handleReady, options) {
+  console.log('Starting Proxy')
   return server.listen({ 
-    onReady: options.handleReady,
-    onRequest: handleRequest.run(options),
+    onReady: handleReady,
+    onRequest: handleRequest(options),
     port: options.port
   });
 }
@@ -34,7 +33,7 @@ export default function proxy(options) {
 /**
  * Entry Point for Requests
  **/
-const handleRequest = Reader(options => {
+function handleRequest(options) {
   return (request, response) => {
     R.compose(
       R.curry(attachCORSHeaders)(response), 
@@ -52,11 +51,11 @@ const handleRequest = Reader(options => {
       R.pipe(
         updateFormHeaders,
         setBody(payload),
-        req => echoToResponse(req).run(options) // async action
+        simplifiedRequest => echoToResponse(simplifiedRequest).run(options) // async action
       )(simplify(options, request))
     });
   };
-});
+};
 
 function echo(request, response) {
   return Reader(options => options.mode).flatMap(
@@ -93,22 +92,33 @@ function cacheOnly(request, response) {
 
 
 function repeat(request, response) {
-  return Reader(options => {
-    //TODO: Implement
-  });
+  return Reader.ask()
+    .map(options => cacheClient.read(request, options))
+    .map(pendingRead => { 
+      pendingRead.then(payload => {
+        // TODO: Set Response Headers etc.
+        const cachePayload = Buffer.from(payload.response.body, 'hex');
+        response.end(cachePayload);
+      });
+    });
 }
 
 function cache(request, response) {
   return Reader.ask()
     .map(options => client.fetch(request, response, options))
-    .flatMap(pendingResponse => record(request, pendingResponse));
+    .flatMap(pendingResponse => record(request, pendingResponse))
+    .flatMap(pendingRecord =>  
+      Reader(options => 
+        pendingRecord.then(_ => repeat(request, response).run(options))
+      )
+    );
 }
 
 function record(request, pendingResponse) {
   return Reader(options => {
-    pendingResponse.then(remoteResponse => {
-      cacheClient.record(request, remoteResponse, options);
-    });
+    return pendingResponse.then(remoteResponse => 
+      cacheClient.record(request, remoteResponse, options)
+    );
     // TODO: Handle Error.
   });
 }
@@ -118,6 +128,7 @@ function notFound(request, response) {
     // TODO: Fill response with a default AO Message. 
   });
 }
+
 
 function isCached(options) {
   return request => cacheClient.isCached(request, options);

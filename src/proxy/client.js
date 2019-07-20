@@ -18,7 +18,6 @@ export function fetch(request, response, options) {
     const bodyIsNotNil = R.compose(R.not, R.isNil, R.prop("body")); 
 
     remoteRequest.on('error', onErrorConnecting);
-    // Forward Request Body
     R.when(bodyIsNotNil, R.pipe(getFormattedRequestBody, writeData))(request);
     remoteRequest.end();
   });
@@ -30,7 +29,7 @@ function onRequestEstablished(options, request, response, resolve, reject) {
 }
 
 
-function accumulateResponse(remoteServerResponse, options, resolve, reject) {
+function accumulateResponse(remoteServerResponse, originalRequest, resolve, reject) {
   const { headers, statusCode } = remoteServerResponse;
   const isJson = ContentType.isJson(headers)
   const contentType = ContentType.get(headers);
@@ -38,13 +37,14 @@ function accumulateResponse(remoteServerResponse, options, resolve, reject) {
   remoteServerResponse.on('data', chunk => responseData.push(chunk));
   remoteServerResponse.on('end', () => {
     const payload = Buffer.concat(responseData);
-    const data = options.method == 'OPTIONS' || !isJson ? payload.toString("hex") : parseJson(payload.toString("utf8"));
     resolve({
-      data,
-      headers,
-      request: options,
-      status: statusCode,
-      type: contentType || ContentType.TEXT_PLAIN
+      request: originalRequest,
+      response: {
+        body: payload.toString("hex"),
+        headers,
+        status: statusCode,
+        type: contentType || ContentType.TEXT_PLAIN
+      }
     });
   });
 

@@ -1,4 +1,5 @@
 import R from "ramda";
+
 export function parseJson(jsonString) {
   try {
     return JSON.parse(jsonString);

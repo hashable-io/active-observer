@@ -2,12 +2,15 @@ import fs from "fs";
 import path from "path";
 
 import R from "ramda";
+import rebote from "rebote";
 
 import * as headerUtils from "./headers.js";
 import * as hashUtils from "../utils/hash";
 import * as utils from "../utils";
+import { parseJson } from "../utils/json";
 
-const EXT = '.cache'
+const EXT = '.cache';
+
 export function isCached(request, options) {
   return R.any(fileExists, [
     requestPathOverride(request, options),
@@ -17,23 +20,18 @@ export function isCached(request, options) {
 
 export function record(request, response, options) {
   return new Promise((resolve, reject) => {
-    // TODO: Migrate to {response, request, options} format
-    response.request.headers = headerUtils.filterHeaders(options.cacheHeader, request.headers);
-    response.headers = headerUtils.removeHeaders(options.responseHeaderBlacklist, response.headers);
-    response.request.path = headerUtils.filterQueryParameters(
-      options.queryParameterBlacklist,
-      response.request.path
-    );
+    response.request.headers = headerUtils.filterHeaders(request, options);
+    response.request.path = headerUtils.filterQueryParameters(request, options);
+    response.response.headers = headerUtils.removeHeaders(response.response, options);
 
     let responseString = utils.stringify(response) + '\n';
 
     let writeToFile = () => {
-      if (options.passthrough) { return resolve(response); }
       let targetFile = getWriteFileName(request, options);
       writeToAccessFile(targetFile, options);
       fs.writeFile(targetFile, responseString, (err) => {
         if (err) { return reject(err); }
-        resolve(response);
+        resolve(true);
       });
     };
 
@@ -43,6 +41,17 @@ export function record(request, response, options) {
     }
 
     writeToFile();
+  });
+}
+
+export function read(request, options) {
+  return new Promise((resolve, reject) => {
+    const filePath = getReadFileName(request, options);
+    writeToAccessFile(filePath, options);
+    fs.readFile(filePath, (err, fileContents) => {
+      if (err) { return reject(err); }
+      resolve(parseJson(fileContents));
+    });
   });
 }
 
@@ -76,12 +85,13 @@ function createDirectoryParent(directoryPath, callback) {
   });
 }
 
-
 function fileExists(location) {
   try {
+    const RW_MODE = fs.F_OK | fs.R_OK | fs.W_OK;
     fs.accessSync(location, RW_MODE);
     return true;
   } catch (error) {
+    rebote.rethrow(error);
     return false;
   }
 }
@@ -123,6 +133,12 @@ function requestHash(request, options) {
   return hashUtils.requestHash(request, options)
     .toString()
     .substr(0,10);
+}
+
+function getReadFileName(request, options) {
+  const overridePath = R.find(fileExists, [requestPathOverride(request, options)]);
+  const baseRequestPath = requestPath(request, options);
+  return R.defaultTo(baseRequestPath, overridePath)
 }
 
 function getWriteFileName(request, options) {
