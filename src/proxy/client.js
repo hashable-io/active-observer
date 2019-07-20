@@ -3,7 +3,7 @@ import R from "ramda";
 import http from 'http';
 import https from 'https';
 
-import { ContentType } from "../constants";
+import { ContentType, CACHE_ENCODING } from "../constants";
 import { regExArrayContains, otherwise } from "../utils";
 import { parseJson } from "../utils/json";
 
@@ -40,7 +40,7 @@ function accumulateResponse(remoteServerResponse, originalRequest, resolve, reje
     resolve({
       request: originalRequest,
       response: {
-        body: payload.toString("hex"),
+        body: payload.toString(CACHE_ENCODING),
         headers,
         status: statusCode,
         type: contentType || ContentType.TEXT_PLAIN
@@ -55,9 +55,7 @@ function accumulateResponse(remoteServerResponse, originalRequest, resolve, reje
 
 function getFormattedRequestBody({ body, headers }) {
   return R.cond([
-    R.pair(ContentType.isJson, _ => JSON.stringify(body)),
-    R.pair(ContentType.isText, _ => body),
-    R.pair(otherwise,          _ => Buffer.from(body, "hex"))
+    R.pair(otherwise,          _ => Buffer.from(body, CACHE_ENCODING))
   ])(headers);
 }
 

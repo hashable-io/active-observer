@@ -6,14 +6,14 @@ import R from "ramda";
 import * as client from "./client";
 import * as cacheClient from "./cache";
 import server from "./server";
-import { ContentType, Headers, Modes } from "../constants"
+import { ContentType, Headers, Modes, CACHE_ENCODING } from "../constants"
+import { otherwise } from "../utils";
 import {
   attachCORSHeaders,
   standardizeHeaders,
   sortHeader,
   updateFormHeaders
-} from "./headers"
-import { otherwise } from "../utils";
+} from "../utils/headers"
 import { parseJson } from "../utils/json";
 
 export default function proxy(handleReady, options) {
@@ -97,7 +97,7 @@ function repeat(request, response) {
     .map(pendingRead => { 
       pendingRead.then(payload => {
         // TODO: Set Response Headers etc.
-        const cachePayload = Buffer.from(payload.response.body, 'hex');
+        const cachePayload = Buffer.from(payload.response.body, CACHE_ENCODING);
         response.end(cachePayload);
       });
     });
@@ -149,13 +149,7 @@ function simplify(options, request) {
 }
 
 function updateWithParsedBody(data, request) {
-  const isJson = R.always(R.compose(ContentType.isJson, R.prop("headers"))(request))
-  const payload = R.ifElse(
-    isJson,
-    x => parseJson(x.toString("utf8")),
-    x => x.toString("hex")
-  )(data)
-
+  const payload = data.toString(CACHE_ENCODING);
   return R.set(R.lensProp("body"), payload, request);
 }
 

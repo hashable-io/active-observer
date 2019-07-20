@@ -6,13 +6,15 @@ export const LogLevels = {
   INFO: "info",
   NONE: "none",
   WARN: "warn"
-}
+};
+
+export const CACHE_ENCODING = "base64";
 
 export const Modes = {
   CACHE_ONLY: "cache_only",
   PROXY_ONLY: "proxy_only",
   PROXY_WITH_CACHE: "proxy_with_cache"
-}
+};
 
 const ACCEPT = 'accept';
 const AUTHORIZATION =  'authorization';

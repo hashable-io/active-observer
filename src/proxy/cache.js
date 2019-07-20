@@ -4,8 +4,8 @@ import path from "path";
 import R from "ramda";
 import rebote from "rebote";
 
-import * as headerUtils from "./headers.js";
 import * as hashUtils from "../utils/hash";
+import * as headerUtils from "../utils/headers";
 import * as utils from "../utils";
 import { parseJson } from "../utils/json";
 
@@ -20,6 +20,7 @@ export function isCached(request, options) {
 
 export function record(request, response, options) {
   return new Promise((resolve, reject) => {
+    response.options = options;
     response.request.headers = headerUtils.filterHeaders(request, options);
     response.request.path = headerUtils.filterQueryParameters(request, options);
     response.response.headers = headerUtils.removeHeaders(response.response, options);

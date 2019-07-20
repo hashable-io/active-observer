@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import qs from 'querystring';
 
 import { sortObjectKeys } from './json';
-import { filterHeaders } from '../proxy/headers';
+import { filterHeaders } from './headers';
 
 const stringifyBody = R.when(
   R.has('body'),
