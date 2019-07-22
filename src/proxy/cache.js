@@ -51,7 +51,9 @@ export function read(request, options) {
     writeToAccessFile(filePath, options);
     fs.readFile(filePath, (err, fileContents) => {
       if (err) { return reject(err); }
-      resolve(parseJson(fileContents));
+      const onError = R.thunkify(resolve)(fileContents);
+      const onSuccess = R.identity;
+      return parseJson(fileContents).fold(onError, onSuccess);
     });
   });
 }

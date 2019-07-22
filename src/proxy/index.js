@@ -14,7 +14,6 @@ import {
   sortHeader,
   updateFormHeaders
 } from "../utils/headers"
-import { parseJson } from "../utils/json";
 
 export default function proxy(handleReady, options) {
   console.log('Starting Proxy')

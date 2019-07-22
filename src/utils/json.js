@@ -1,10 +1,11 @@
 import R from "ramda";
+import { Either } from "monet" 
 
-export function parseJson(jsonString) {
+export function parseJson(inputString) {
   try {
-    return JSON.parse(jsonString);
+    return Either.right(JSON.parse(inputString));
   } catch (error) {
-    return jsonString;
+    return Either.left(error);
   }
 }
 
