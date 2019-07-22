@@ -6,6 +6,11 @@ import qs from 'querystring';
 import { sortObjectKeys } from './json';
 import { filterHeaders } from './headers';
 
+export function requestHash(request, options) {
+  return composeSignature(filteredAttributes(request, options));
+};
+
+
 const stringifyBody = R.when(
   R.has('body'),
   R.converge(
@@ -16,6 +21,7 @@ const stringifyBody = R.when(
   )
 );
 
+// TODO: Handle case where body is not JSON
 const composeSignature = R.compose(
   computeHash, 
   JSON.stringify, 
@@ -28,10 +34,6 @@ function computeHash (payload) {
   shasum.update(payload);
   return shasum.digest('hex');
 }
-
-export function requestHash(request, options) {
-  return composeSignature(filteredAttributes(request, options));
-};
 
 function filteredAttributes(request, options) {
   const { 

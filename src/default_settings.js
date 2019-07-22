@@ -1,3 +1,4 @@
+import R from "ramda";
 import { LogLevels, Modes } from "./constants";
 
 export const DEFAULT_OPTIONS = {
@@ -11,3 +12,7 @@ export const DEFAULT_OPTIONS = {
   queryParametersIgnored: [],
   responseHeadersIgnored: []
 };
+
+export function withDefaults(other = {}) {
+  return R.mergeRight(DEFAULT_OPTIONS, other);
+}

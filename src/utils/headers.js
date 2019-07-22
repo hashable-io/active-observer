@@ -49,11 +49,11 @@ export function updateFormHeaders(request) {
 
 export function filterHeaders(request, options) {
   const { headersTracked } = options;
-  function keepWanted(targetObject, key) { 
+  function keepWanted(targetObj, key) { 
     const value = request.headers[key];
     return R.when(
       R.always(value), 
-      R.assoc(key, value, targetObj)
+      R.assoc(key, value)
     )(targetObj);
   }
 

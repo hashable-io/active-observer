@@ -1,10 +1,9 @@
 import R from "ramda";
 
-import { DEFAULT_OPTIONS } from "./default_settings";
+import { withDefaults } from "./default_settings";
 import proxy from "./proxy";
 import reprocessor from "./reprocessor";
 
-const withDefaults = R.merge(DEFAULT_OPTIONS);
 
 export function start(handleReady, options) {
   const finalOptions = withDefaults(options);
