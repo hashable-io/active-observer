@@ -6,22 +6,6 @@ export function noop() {
 
 export const otherwise = R.T;
 
-export function stringify(inputObject = '') {
-  switch (typeof (inputObject)) {
-    case 'object':
-      return JSON.stringify(inputObject, null, 2);
-
-    case 'string':
-      return inputObject;
-
-    case 'function':
-      return '[Function]';
-
-    default:
-      return inputObject.toString();
-  }
-} 
-
 export function regExArrayContains(regExArray, value) {
   let inList = (expressionMatched, next) => {
     let matchList = new RegExp(next).exec(value);

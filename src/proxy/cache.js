@@ -10,6 +10,7 @@ import * as utils from "../utils";
 import { parseJson } from "../utils/json";
 
 const EXT = '.cache';
+const TRAILING_NEW_LINE = '\n';
 
 export function isCached(request, options) {
   return R.any(fileExists, [
@@ -25,7 +26,7 @@ export function record(request, response, options) {
     response.request.path = headerUtils.filterQueryParameters(request, options);
     response.response.headers = headerUtils.removeHeaders(response.response, options);
 
-    let responseString = utils.stringify(response) + '\n';
+    let responseString = JSON.stringify(response) + TRAILING_NEW_LINE;
 
     let writeToFile = () => {
       let targetFile = getWriteFileName(request, options);
