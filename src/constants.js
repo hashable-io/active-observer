@@ -43,13 +43,13 @@ export const Headers = {
   },
 }
 
-export const HeadersWhitelist = {
+export const AllowedHeadersList = [
   ACCEPT,
   ACCESS_CONTROL_REQUEST_METHOD,
   ACCESS_CONTROL_REQUEST_HEADERS,
   AUTHORIZATION,
   ORIGIN
-}
+];
 
 const APPLICATION_JSON = "application/json";
 const MULTIPART_FORM = "multipart/form-data";

@@ -2,11 +2,11 @@ import qs from 'querystring';
 
 import R from "ramda";
 
-import { ContentType, Headers, HeadersWhitelist } from "../constants"
+import { ContentType, Headers, AllowedHeadersList } from "../constants"
 
-export const isInWhiteList = R.curry((key, value) => {
+export const isAllowedHeader = R.curry((key, value) => {
   return R.and(
-    R.includes(key, R.keys(HeadersWhitelist)),
+    R.includes(key, AllowedHeadersList),
     R.not(key === Headers.CONTENT_LENGTH && value === '0')
   )
 });
@@ -20,7 +20,7 @@ export function attachCORSHeaders(response, origin) {
 
 export function standardizeHeaders(headers) {
   const entries = R.toPairs(sortHeaders(headers));
-  const transform = R.filter(R.apply(isInWhiteList));
+  const transform = R.filter(R.apply(isAllowedHeader));
   const reducer = (targetObj, [key, value]) => R.assoc(key, value, targetObj);
   
   return R.transduce(transform, reducer, {}, entries);
