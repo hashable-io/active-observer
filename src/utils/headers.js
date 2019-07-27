@@ -27,13 +27,13 @@ export function standardizeHeaders(headers) {
 }
 
 export function sortHeaders(headers) {
-  const setValue = (targetObj, key) => R.assoc(key, headers[key], targetObj)
+  const setValue = (targetObj, [key, value]) => R.assoc(key, value, targetObj)
 
   // Sort the keys to get predictable order
   return R.pipe(
-    R.keys,
-    R.map(R.toLower),
-    R.sortBy(R.identity),
+    R.toPairs,
+    R.map(([key, value]) => [R.toLower(key), value]),
+    R.sortBy(([key, value]) => key),
     R.reduce(setValue, {})
   )(headers);
 }

@@ -33,3 +33,49 @@ describe("isAllowedHeader", function() {
 });
 
 
+describe("standardizeHeaders", function() {
+  context("empty object", function() {
+    it("returns an empty object", function() {
+      const input = {};
+      const expectedOutput = {};
+      expect(util.standardizeHeaders(input)).to.deep.equal(expectedOutput);
+    });
+  });
+
+  context("invalid headers are provided", function() {
+    it("returns an empty headers object", function() {
+      const input = {
+        Zebra: "Hello World",
+        CrazyHeader: 1
+      };
+
+      const expectedOutput = {};
+
+      expect(util.standardizeHeaders(input)).to.deep.equal(expectedOutput);
+    });
+  });
+
+  context("valid out of order headers are provided", function() {
+    it("returns an ordered headers object", function() {
+      const input = {
+        ORIGIN: "http://example.com",
+        AUTHORIZATION: "Bearer: 1234",
+        "ACCESS-CONTROL-REQUEST-METHOD": "GET, POST",
+        "ACCESS-CONTROL-REQUEST-HEADERS": "Test X",
+        ACCEPT: "Pizza"
+      };
+
+      const expectedOutput = {
+        "accept": "Pizza",
+        "access-control-request-headers": "Test X",
+        "access-control-request-method": "GET, POST",
+        "authorization": "Bearer: 1234",
+        "origin": "http://example.com",
+      };
+
+      expect(util.standardizeHeaders(input)).to.deep.equal(expectedOutput);
+    });
+  });
+});
+
+
