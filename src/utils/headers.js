@@ -4,6 +4,8 @@ import R from "ramda";
 
 import { ContentType, Headers, AllowedHeadersList } from "../constants"
 
+const setValue = (targetObj, [key, value]) => R.assoc(key, value, targetObj)
+
 export const isAllowedHeader = R.curry((key, value) => {
   return R.and(
     R.includes(key, AllowedHeadersList),
@@ -12,23 +14,23 @@ export const isAllowedHeader = R.curry((key, value) => {
 });
 
 export function attachCORSHeaders(response, origin) {
-  R.forEachObjIndexed(
-    (value, key) => response.setHeader(key, value),
-    Headers.corsHeadersWithOrigin(origin)
-  )
+  const { headers } = response;
+  const updatedHeaders = R.pipe(
+    R.toPairs,
+    R.reduce(setValue, headers)
+  )(Headers.corsHeadersWithOrigin(origin));
+
+  return R.assoc("headers", updatedHeaders, response);
 }
 
 export function standardizeHeaders(headers) {
   const entries = R.toPairs(sortHeaders(headers));
   const transform = R.filter(R.apply(isAllowedHeader));
-  const reducer = (targetObj, [key, value]) => R.assoc(key, value, targetObj);
   
-  return R.transduce(transform, reducer, {}, entries);
+  return R.transduce(transform, setValue, {}, entries);
 }
 
 export function sortHeaders(headers) {
-  const setValue = (targetObj, [key, value]) => R.assoc(key, value, targetObj)
-
   // Sort the keys to get predictable order
   return R.pipe(
     R.toPairs,
@@ -63,7 +65,13 @@ export function filterHeaders(request, options) {
 export function removeHeaders(response, options) {
   const { responseHeadersIgnored } = options;
   const { headers } = response;
-  return {};
+  const keyIsIgnored = ([key, value]) => !R.includes(key, responseHeadersIgnored);
+
+  return R.pipe(
+    R.toPairs,
+    R.filter(keyIsIgnored),
+    R.fromPairs
+  )(headers);
 }
 
 export function filterQueryParameters(request, options) {

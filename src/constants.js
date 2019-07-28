@@ -37,7 +37,7 @@ export const Headers = {
       "Access-Control-Allow-Credentials": "true",
       "Access-Control-Allow-Headers": "X-Requested-With,Content-Type,Accept,Origin,Authorization",
       "Access-Control-Allow-Methods": "HEAD,OPTIONS,GET,PUT,POST,DELETE",
-      "Access-Control-Allow-Origin": origin || "*",
+      "Access-Control-Allow-Origin": origin,
       "Access-Control-Max-Age": "1800"
     };
   },
