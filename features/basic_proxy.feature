@@ -32,3 +32,20 @@ Feature: Minimal Proxy Instance
       | logLevel      | error           |
     When I serve
     Then I see no error
+
+  @TestServer
+  Scenario: Serving with Required Options
+    Given I want to create a proxy instance with the following options
+      | OPTION         | VALUE                 |
+      | cacheDir       | ./temp/               |
+      | serverBaseUrl  | http://localhost:9001 |
+      | headersTracked | content-type          |
+      | port           | 9000                  |
+    And I serve
+    And I see no error
+    When I make a "POST" request to "/cacheHeader" with headers:
+      | HEADER       | VALUE            |
+      | content-type | application/json |
+    Then I see a cache file for "/cacheheader" with the following headers:
+      | HEADER       | VALUE            |
+      | content-type | application/json |

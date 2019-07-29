@@ -11,6 +11,7 @@ Given(/^I want to create a proxy instance with no options$/, function (done) {
 
 const arrayValues = [
   "contentTypesIgnored",
+	"headersTracked",
   "ignoreJsonBodyPath",
   "queryParametersIgnored",
   "responseHeadersIgnored"
