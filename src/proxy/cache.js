@@ -53,18 +53,40 @@ export function read(request, options) {
     fs.readFile(filePath, (err, fileContents) => {
       if (err) { return reject(err); }
       const onError = R.thunkify(resolve)(fileContents);
-      const onSuccess = R.identity;
+      const onSuccess = resolve;
       return parseJson(fileContents).fold(onError, onSuccess);
     });
   });
 }
 
+export function findFileType(root, predicate) {
+  const formattedRoot = formatRootPath(root);
+  try {
+    const findFileTypes = R.compose(
+      R.filter((file) => file != '.' && file != '..'),
+      R.map((file)  => formattedRoot + file),
+      R.filter(predicate)
+    );
+    return R.transduce(findFileTypes, R.flip(R.append), [], fs.readdirSync(formattedRoot));
+  } catch (error) {
+    return []; // No Matches
+  }
+}
+export function findDirectories(root) {
+  return R.transduce(R.map(findDirectories), R.flip(R.append), [root], findFileType(root, directoryExists));
+};
+
+export const directoryExists = R.tryCatch(isDirectory, R.F);
+
 ///////////////////////////////////////////////////////////////////////////////
 // Helper Functions:
 ///////////////////////////////////////////////////////////////////////////////
+  
+const formatRootPath = (root) => root.lastIndexOf('/') != root.length - 1 ? root + '/' : root;
 
-const isDirectory = (path) => fs.statSync(path).isDirectory();
-const directoryExists = R.tryCatch(isDirectory, R.F);
+function isDirectory(path) { 
+  return fs.statSync(path).isDirectory();
+}
 
 function createDirectory(directoryPath) {
   return new Promise((resolve, reject) => {

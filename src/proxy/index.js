@@ -77,7 +77,10 @@ function proxyWithCache(request, response) {
 }
 
 function proxyOnly(request, response) {
-  return Reader(options => client.fetch(request, response, options));
+  return Reader(options => { 
+	  client.fetch(request, response, options)
+		  .then(_ => response.end(Buffer.from(_.response.body, CACHE_ENCODING))) // TODO: Set Headers
+	});
 }
 
 function cacheOnly(request, response) {
