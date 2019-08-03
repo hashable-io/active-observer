@@ -22,12 +22,11 @@ export function isCached(request, options) {
 export function record(request, response, options) {
   return new Promise((resolve, reject) => {
     response.options = options;
-		console.log("????", request.headers)
     response.request.headers = headerUtils.filterHeaders(request, options);
     response.request.path = headerUtils.filterQueryParameters(request, options);
     response.response.headers = headerUtils.removeHeaders(response.response, options);
 
-    let responseString = JSON.stringify(response) + TRAILING_NEW_LINE;
+    let responseString = JSON.stringify(response, null, 2) + TRAILING_NEW_LINE;
 
     let writeToFile = () => {
       let targetFile = getWriteFileName(request, options);
