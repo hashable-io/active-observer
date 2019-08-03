@@ -19,11 +19,12 @@ Feature: Proxy Modes
 
   Scenario: cache_only mode
     Given I want to create a proxy instance with the following options
-      | OPTION        | VALUE                 |
-      | cacheDir      | ./features/fixtures/  |
-      | mode          | cache_only            |
-			| port          | 9000                  |
-      | serverBaseUrl | http://localhost:9001 |
+      | OPTION               | VALUE                 |
+      | __skipCacheCleanUp__ | true                  |
+      | cacheDir             | ./features/fixtures/  |
+      | mode                 | cache_only            |
+			| port                 | 9000                  |
+      | serverBaseUrl        | http://localhost:9001 |
     And I serve
     When I make a "GET" request to "/getCount"
     Then I see the result "0"
