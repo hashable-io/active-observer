@@ -16,10 +16,6 @@ describe("isAllowedHeader", function() {
   });
 
   context("other header values", function() {
-    it(`it returns false for ${Headers.CONTENT_TYPE}`, function() {
-      expect(util.isAllowedHeader(Headers.CONTENT_TYPE, testUtils.randString())).to.be.false
-    });
-
     it(`it returns false for ${Headers.CONTENT_LENGTH}`, function() {
       expect(util.isAllowedHeader(Headers.CONTENT_LENGTH, testUtils.randString())).to.be.false
     });
