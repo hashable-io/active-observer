@@ -1,4 +1,4 @@
-import { directoryExists, findFileType }from '../../src/proxy/cache';
+import { directoryExists, findFileType }from '../../src/cache/disk';
 import { setWorldConstructor } from 'cucumber';
 import path from 'path';
 

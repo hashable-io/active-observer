@@ -4,7 +4,7 @@ import { Reader } from "monet";
 import R from "ramda";
 
 import * as client from "./client";
-import * as cacheClient from "./cache";
+import * as diskCacheClient from "../cache/disk";
 import server from "./server";
 import { ContentType, Headers, Modes, CACHE_ENCODING } from "../constants"
 import { otherwise } from "../utils";
@@ -95,7 +95,7 @@ function cacheOnly(request, response) {
 
 function repeat(request, response) {
   return Reader.ask()
-    .map(options => cacheClient.read(request, options))
+    .map(options => diskCacheClient.read(request, options))
     .map(pendingRead => { 
       pendingRead.then(payload => {
         // TODO: Set Response Headers etc.
@@ -119,7 +119,7 @@ function cache(request, response) {
 function record(request, pendingResponse) {
   return Reader(options => {
     return pendingResponse.then(remoteResponse => 
-      cacheClient.record(request, remoteResponse, options)
+      diskCacheClient.record(request, remoteResponse, options)
     );
     // TODO: Handle Error.
   });
@@ -133,7 +133,7 @@ function notFound(request, response) {
 
 
 function isCached(options) {
-  return request => cacheClient.isCached(request, options);
+  return request => diskCacheClient.isCached(request, options);
 }
 
 function simplify(options, request) {
