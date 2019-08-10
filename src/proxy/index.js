@@ -78,9 +78,9 @@ function proxyWithCache(request, response) {
 
 function proxyOnly(request, response) {
   return Reader(options => { 
-	  client.fetch(request, response, options)
-		  .then(_ => response.end(Buffer.from(_.response.body, CACHE_ENCODING))) // TODO: Set Headers
-	});
+    const pendingFetch = client.fetch(request, response, options);
+    R.then(writeReponse(response))(pendingFetch);
+  });
 }
 
 function cacheOnly(request, response) {
@@ -96,13 +96,18 @@ function cacheOnly(request, response) {
 function repeat(request, response) {
   return Reader.ask()
     .map(options => diskCacheClient.read(request, options))
-    .map(pendingRead => { 
-      pendingRead.then(payload => {
-        // TODO: Set Response Headers etc.
-        const cachePayload = Buffer.from(payload.response.body, CACHE_ENCODING);
-        response.end(cachePayload);
-      });
-    });
+    .map(R.then(writeReponse(response)));
+}
+
+function writeReponse(response) {
+  return payload => {
+    const { body, headers, status, type } = payload.response;
+    const cachePayload = Buffer.from(body, CACHE_ENCODING);
+    const cachedHeader = { ...headers, [Headers.CONTENT_TYPE]: type};
+
+    response.writeHead(status, cachedHeader);
+    response.end(cachePayload);
+  };
 }
 
 function cache(request, response) {
@@ -111,18 +116,33 @@ function cache(request, response) {
     .flatMap(pendingResponse => record(request, pendingResponse))
     .flatMap(pendingRecord =>  
       Reader(options => 
-        pendingRecord.then(_ => repeat(request, response).run(options))
+        pendingRecord
+          .then(_ => repeat(request, response).run(options))
+          .catch(handleErrorRepeating(request, response))
       )
     );
 }
 
 function record(request, pendingResponse) {
   return Reader(options => {
-    return pendingResponse.then(remoteResponse => 
-      diskCacheClient.record(request, remoteResponse, options)
-    );
-    // TODO: Handle Error.
+    return pendingResponse
+      .then(remoteResponse => diskCacheClient.record(request, remoteResponse, options))
+      .catch(handleErrorRecording(request, pendingResponse));
   });
+}
+
+function handleErrorRecording(request, response) {
+  return error => {
+    console.log("Error occurred while trying to record response to cache.");
+    console.log("Error: ", e);
+  };
+}
+
+function handleErrorRepeating(request, response) {
+  return error => {
+    console.log("Error occurred while trying to repeat response to cache.");
+    console.log("Error: ", e);
+  };
 }
 
 function notFound(request, response) {
@@ -130,7 +150,6 @@ function notFound(request, response) {
     // TODO: Fill response with a default AO Message. 
   });
 }
-
 
 function isCached(options) {
   return request => diskCacheClient.isCached(request, options);
