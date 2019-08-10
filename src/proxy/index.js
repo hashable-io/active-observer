@@ -51,7 +51,7 @@ function handleRequest(options) {
         updateFormHeaders,
         setBody(payload),
         simplifiedRequest => echoToResponse(simplifiedRequest).run(options) // async action
-      )(simplify(options, request))
+      )(simplify(request, options))
     });
   };
 };
@@ -155,7 +155,7 @@ function isCached(options) {
   return request => diskCacheClient.isCached(request, options);
 }
 
-function simplify(options, request) {
+function simplify(request, options) {
   const { serverBaseUrl } = options;
   const { hostname, path, port, protocol } = url.parse(serverBaseUrl + request.url);
 
