@@ -10,9 +10,12 @@ Feature: Proxy Modes
       | serverBaseUrl | http://localhost:9001 |
     And I serve
     When I make a "GET" request to "/getCount"
-    Then I see the result "0"
+    Then I see a success status code
+    And I see the result "0"
     When I make a "GET" request to "/increment"
-    Then I make a "GET" request to "/getCount"
+    Then I see a success status code
+    When I make a "GET" request to "/getCount"
+    Then I see a success status code
     And I see the result "1"
     And I can see 0 cache files for "/getCount"
     And I can see 0 cache files for "/increment"
@@ -27,9 +30,12 @@ Feature: Proxy Modes
       | serverBaseUrl        | http://localhost:9001 |
     And I serve
     When I make a "GET" request to "/getCount"
-    Then I see the result "0"
+    Then I see a success status code
+    And I see the result "0"
     When I make a "GET" request to "/increment"
-    Then I make a "GET" request to "/getCount"
+    Then I see a success status code
+    When I make a "GET" request to "/getCount"
+    Then I see a success status code
     And I see the result "0"
     And I can see 1 cache files for "/getCount"
     And I can see 1 cache files for "/increment"
@@ -44,9 +50,12 @@ Feature: Proxy Modes
       | serverBaseUrl | http://localhost:9001 |
     And I serve
     When I make a "GET" request to "/getCount"
-    Then I see the result "0"
+    Then I see a success status code
+    And I see the result "0"
     When I make a "GET" request to "/increment"
-    Then I make a "GET" request to "/getCount"
+    Then I see a success status code
+    When I make a "GET" request to "/getCount"
+    Then I see a success status code
     And I see the result "0"
     And I can see 1 cache files for "/getCount"
     And I can see 1 cache files for "/increment"

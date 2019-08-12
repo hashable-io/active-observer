@@ -14,6 +14,7 @@ When(/^I make a "([^"]*)" request to "([^"]*)"$/, function (method, path, done) 
 
   let req = http.request(options, (response) => {
     let data = [];
+    this.status = response.statusCode;
     response.on('data', chunk => { data.push(chunk); });
     response.on('end', () => {
       this.result = Buffer.concat(data);

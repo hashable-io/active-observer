@@ -53,3 +53,7 @@ When(/^I see an error asking me to specify missing options$/, function (done) {
 Then(/^I see no error$/, function (done) {
   done(this.error ? 'Did Not Expec to See Error: ' + this.error : undefined);
 });
+
+Then(/^I see a success status code$/, function (done) {
+  done(this.status >= 400 ? 'Did Not Expec to See Error Status Codes: ' + this.status : undefined);
+});

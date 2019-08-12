@@ -70,7 +70,7 @@ function echo(request, response) {
 function proxyWithCache(request, response) {
   return Reader.ask().flatMap(options => 
     R.cond([
-      R.pair(isCached(options), _ => repeat(request, response)),
+      R.pair(isCached(options), _ => repeatWithErrorHandling(request, response)),
       R.pair(otherwise,         _ => cache(request, response))
     ])(request)
   );
@@ -78,25 +78,33 @@ function proxyWithCache(request, response) {
 
 function proxyOnly(request, response) {
   return Reader(options => { 
-    const pendingFetch = client.fetch(request, response, options);
-    R.then(writeReponse(response))(pendingFetch);
+    client
+      .fetch(request, response, options)
+      .then(writeReponse(response))
+      .catch(writeErrorResponse(response, "Failed to contact source server."))
   });
 }
 
 function cacheOnly(request, response) {
   return Reader.ask().flatMap(options => 
     R.cond([
-      R.pair(isCached(options), _ => repeat(request, response)),
+      R.pair(isCached(options), _ => repeatWithErrorHandling(request, response)),
       R.pair(otherwise,         _ => notFound(request, response))
     ])(request)
   );
 }
 
-
 function repeat(request, response) {
   return Reader.ask()
     .map(options => diskCacheClient.read(request, options))
     .map(R.then(writeReponse(response)));
+}
+
+function repeatWithErrorHandling(request, response) {
+  return repeat(request, response)
+    .map(pendingRepeat => 
+      pendingRepeat.catch(handleErrorRepeating(request, response))
+    );
 }
 
 function writeReponse(response) {
@@ -112,42 +120,62 @@ function writeReponse(response) {
 
 function cache(request, response) {
   return Reader.ask()
-    .map(options => client.fetch(request, response, options))
-    .flatMap(pendingResponse => record(request, pendingResponse))
+    .map(options => 
+      client
+        .fetch(request, response, options)
+        .catch(writeErrorResponse(response, "Failed to contact source server."))
+    )
+    .flatMap(record(request, response))
     .flatMap(pendingRecord =>  
       Reader(options => 
-        pendingRecord
-          .then(_ => repeat(request, response).run(options))
-          .catch(handleErrorRepeating(request, response))
+        pendingRecord.then(_ => 
+          repeatWithErrorHandling(request, response).run(options)
+        )
       )
     );
 }
 
-function record(request, pendingResponse) {
-  return Reader(options => {
+function record(request, response) {
+  return pendingResponse => Reader(options => {
     return pendingResponse
       .then(remoteResponse => diskCacheClient.record(request, remoteResponse, options))
-      .catch(handleErrorRecording(request, pendingResponse));
+      .catch(handleErrorRecording(request, response));
   });
 }
 
 function handleErrorRecording(request, response) {
   return error => {
     console.log("Error occurred while trying to record response to cache.");
-    console.log("Error: ", e);
+    console.log("Error: ", error);
+    writeErrorResponse(response, "Active Observer Failed to Record to Cache")(error)
   };
 }
 
 function handleErrorRepeating(request, response) {
   return error => {
-    console.log("Error occurred while trying to repeat response to cache.");
-    console.log("Error: ", e);
+    console.log("Error occurred while trying to repeat response from cache.");
+    console.log("Error: ", error);
+    writeErrorResponse(response, "Active Observer Failed to Load from Cache")(error)
+  };
+}
+
+function writeErrorResponse(response, message) {
+  return error => {
+    const headers = { 
+      [Headers.CONTENT_TYPE]: ContentType.APPLICATION_JSON
+    };
+    response.writeHead(500, headers);
+    response.end(JSON.stringify({
+      status: 500,
+      message: message,
+      error: error
+    }));
   };
 }
 
 function notFound(request, response) {
   return Reader(options => {
-    // TODO: Fill response with a default AO Message. 
+    writeErrorResponse(response, "Cache Only Mode. The requested path has not been observed before.");
   });
 }
 

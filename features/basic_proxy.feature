@@ -46,6 +46,7 @@ Feature: Minimal Proxy Instance
     When I make a "POST" request to "/cacheHeader" with headers:
       | HEADER       | VALUE            |
       | content-type | application/json |
-    Then I see a cache file for "/cacheheader" with the following headers:
+    Then I see a success status code
+    And I see a cache file for "/cacheheader" with the following headers:
       | HEADER       | VALUE            |
       | content-type | application/json |
