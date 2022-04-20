@@ -170,6 +170,7 @@ function writeErrorResponse(response, message) {
       message: message,
       error: error
     }));
+    return Promise.reject(error); // Pass on the error message.
   };
 }
 
