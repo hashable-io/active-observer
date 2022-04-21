@@ -1,5 +1,5 @@
-import Hapi from 'hapi';
-import inert from 'inert';
+import Hapi from '@hapi/hapi';
+import Inert from '@hapi/inert';
 
 let server = null;
 
@@ -7,8 +7,12 @@ export async function initTestServer(options) {
   options = options || {};
   const userHost = options.host || 'localhost';
   const userPort = options.port || 9001;
-  server = new Hapi.server({ host: userHost, port: userPort });
-  await server.register(inert);
+  server = Hapi.server({ 
+    address: '0.0.0.0',
+    host: userHost, 
+    port: userPort 
+  });
+  await server.register(Inert);
 };
 
 export function addRoute(path, method, handler) {
