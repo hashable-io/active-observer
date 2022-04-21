@@ -128,19 +128,21 @@ function cache(request, response) {
     .flatMap(record(request, response))
     .flatMap(pendingRecord =>  
       Reader(options => 
-        pendingRecord.then(_ => 
-          repeatWithErrorHandling(request, response).run(options)
-        )
+        pendingRecord
+          .then(_ => repeatWithErrorHandling(request, response).run(options))
       )
     );
 }
 
 function record(request, response) {
-  return pendingResponse => Reader(options => {
-    return pendingResponse
-      .then(remoteResponse => diskCacheClient.record(request, remoteResponse, options))
-      .catch(handleErrorRecording(request, response));
-  });
+  return pendingResponse => Reader(options => 
+    pendingResponse
+      .then(remoteResponse => 
+        diskCacheClient
+          .record(request, remoteResponse, options)
+          .catch(handleErrorRecording(request, response))
+      )
+  );
 }
 
 function handleErrorRecording(request, response) {
