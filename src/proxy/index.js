@@ -97,7 +97,7 @@ function cacheOnly(request, response) {
 function repeat(request, response) {
   return Reader.ask()
     .map(options => diskCacheClient.read(request, options))
-    .map(R.then(writeReponse(response)));
+    .map(R.andThen(writeReponse(response)));
 }
 
 function repeatWithErrorHandling(request, response) {

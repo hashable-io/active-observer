@@ -22,7 +22,7 @@ Given(/^I want to create a proxy instance with the following options$/, function
   const updatedInput = input.map(row => {
     const [key, value] = row;
     const updatedValue = 
-      R.contains(key, arrayValues) ? 
+      R.includes(key, arrayValues) ? 
         value.split(",").map(_ => _.trim()) : 
         value;
 
