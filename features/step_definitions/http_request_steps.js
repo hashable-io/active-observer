@@ -84,21 +84,28 @@ When(/^I make a "([^"]*)" request to "([^"]*)" with headers:$/, { timeout: TIMEO
 
   let req = http.request(options, (response) => {
     let data = [];
-    response.on('data', (chunk) => {
-      data.push(chunk);
+
+    response.on('data', chunk => { 
+      data.push(chunk); 
     });
+
     response.on('end', () => {
       this.result = Buffer.concat(data);
       done(data.length ? undefined : 'Empty Response');
     });
-    response.on('error', (error) => { done('Error during request.' + error); });
+
+    response.on('error', (error) => { 
+      done('Error during response.' + error); 
+    });
   });
-  req.on('error', (error) => { done('Error during request:' + error); });
-  if (method == 'GET') {
-    req.end();
-  } else {
-    req.end(JSON.stringify({ request: 'some-data' }));
+
+  req.on('error', (error) => { 
+    done('Error during request:' + error); 
+  });
+
+  if (method == 'POST') {
+    req.write(JSON.stringify({ request: 'some-data' }));
   }
+
+  req.end();
 });
-
-
