@@ -16,6 +16,7 @@ export const Modes = {
   PROXY_WITH_CACHE: "proxy_with_cache"
 };
 
+// Headers:
 const ACCEPT = 'accept';
 const AUTHORIZATION =  'authorization';
 const CONTENT_TYPE = "content-type";
@@ -24,6 +25,7 @@ const CONTENT_LENGTH = "content-length";
 const ORIGIN = 'origin';
 const ACCESS_CONTROL_REQUEST_METHOD = 'access-control-request-method';
 const ACCESS_CONTROL_REQUEST_HEADERS = 'access-control-request-headers';
+
 export const Headers = {
   ACCEPT,
   AUTHORIZATION,
