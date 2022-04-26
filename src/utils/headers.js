@@ -7,13 +7,14 @@ import { ContentType, Headers, AllowedHeadersList } from "../constants"
 const setValue = (targetObj, [key, value]) => R.assoc(key, value, targetObj)
 
 export const isAllowedHeader = predicate => R.curry((key, value) => {
-  return R.or(
-      predicate(key, value), 
-      R.and(
-        R.includes(key, AllowedHeadersList),
-        R.not(key === Headers.CONTENT_LENGTH && value === '0')
-      )
-  )
+  if (R.isNil(predicate)) {
+    return R.and(
+      R.includes(key, AllowedHeadersList),
+      R.not(key === Headers.CONTENT_LENGTH && value === '0')
+    ); 
+  } else {
+    return predicate(key, value);
+  }
 });
 
 export function attachCORSHeaders(response, origin) {
