@@ -187,12 +187,11 @@ function isCached(options) {
 }
 
 function simplify(request, options) {
-  const { mapHeaders, serverBaseUrl } = options;
+  const { mapHeaders, filterHeaders, serverBaseUrl } = options;
   const { hostname, path, port, protocol } = url.parse(serverBaseUrl + request.url);
-  const mappedHeaders = mapHeaders(request.headers);
 
   return {
-    headers: standardizeHeaders(mappedHeaders),
+    headers: standardizeHeaders(request.headers, mapHeaders, filterHeaders),
     hostname,
     method: request.method,
     path,

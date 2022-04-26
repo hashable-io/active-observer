@@ -6,10 +6,13 @@ import { ContentType, Headers, AllowedHeadersList } from "../constants"
 
 const setValue = (targetObj, [key, value]) => R.assoc(key, value, targetObj)
 
-export const isAllowedHeader = R.curry((key, value) => {
-  return R.and(
-    R.includes(key, AllowedHeadersList),
-    R.not(key === Headers.CONTENT_LENGTH && value === '0')
+export const isAllowedHeader = predicate => R.curry((key, value) => {
+  return R.or(
+      predicate(key, value), 
+      R.and(
+        R.includes(key, AllowedHeadersList),
+        R.not(key === Headers.CONTENT_LENGTH && value === '0')
+      )
   )
 });
 
@@ -23,9 +26,14 @@ export function attachCORSHeaders(response, origin) {
   return R.assoc("headers", updatedHeaders, response);
 }
 
-export function standardizeHeaders(headers) {
-  const entries = R.toPairs(sortHeaders(headers));
-  const transform = R.filter(R.apply(isAllowedHeader));
+export function standardizeHeaders(headers, mapHeaders, filterHeaders) {
+  const entries = R.pipe(
+    sortHeaders,
+    R.toPairs,
+    R.map(mapHeaders)
+  )(headers);
+
+  const transform = R.filter(R.apply(isAllowedHeader(filterHeaders)));
   
   return R.transduce(transform, setValue, {}, entries);
 }

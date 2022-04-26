@@ -4,6 +4,7 @@ import { LogLevels, Modes } from "./constants";
 export const DEFAULT_OPTIONS = {
   contentTypesIgnored: [],
   headersTracked: [],
+  filterHeaders: R.F,
   mapHeaders: R.identity,
   hostAgnostic: true,
   ignoreJsonBodyPath: [],
