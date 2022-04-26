@@ -183,7 +183,14 @@ function notFound(request, response) {
 }
 
 function isCached(options) {
-  return request => diskCacheClient.isCached(request, options);
+  return request => {
+    const isCachedOnDisk = diskCacheClient.isCached(request, options);
+    if (R.isNil(options.cachePredicate)) {
+      return isCachedOnDisk;
+    } else {
+      return options.cachePredicate(request, isCachedOnDisk)
+    }
+  }
 }
 
 function simplify(request, options) {
