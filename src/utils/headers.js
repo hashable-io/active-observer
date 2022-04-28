@@ -59,7 +59,7 @@ export function updateFormHeaders(request) {
 
 
 export function filterHeaders(request, options) {
-  const { headersTracked } = options;
+  const { headersTracked, cacheAllRequestHeaders } = options;
   function keepWanted(targetObj, key) { 
     const value = request.headers[key];
     return R.when(
@@ -68,7 +68,13 @@ export function filterHeaders(request, options) {
     )(targetObj);
   }
 
-  return R.reduce(keepWanted, {}, headersTracked);
+  const targetHeaders = R.ifElse(
+    R.equals(true),
+    R.always(R.keys(request.headers)),
+    R.always(headersTracked)
+  )(cacheAllRequestHeaders);
+
+  return R.reduce(keepWanted, {}, targetHeaders);
 }
 
 export function removeHeaders(response, options) {

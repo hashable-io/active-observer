@@ -15,6 +15,7 @@ export const DEFAULT_OPTIONS = {
   filterHeaders: null, // [key, value] => Boolean
   mapHeaders: R.identity, // [key, value] => [key, value]
   cachePredicate: null, // (request, isCachedOnDisk) => Boolean
+  cacheAllRequestHeaders: false, // TODO: Cosolidate with filterHeaders
 };
 
 export function withDefaults(other = {}) {
